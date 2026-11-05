@@ -90,8 +90,16 @@ const KEY = 'utfodringar';
 const HKEY = 'utfodringar_historik';
 let history = [];
 
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function addCard(data) {
-  data = data || { date: new Date().toISOString().slice(0, 10), name: '', count: 0 };
+  if (!data) {
+    const first = document.querySelector('.f-date');
+    data = { date: (first && first.value) ? first.value : todayStr(), name: '', count: 0 };
+  }
   const d = document.createElement('div');
   d.className = 'card';
   d.innerHTML = `
@@ -108,7 +116,9 @@ function addCard(data) {
       <button class="del" onclick="removeCard(this)">Ta bort</button>
       <button class="savebtn" onclick="toHistory(this)">Spara i historik</button>
     </div>`;
-  d.querySelector('.f-date').value = data.date;
+  const dateEl = d.querySelector('.f-date');
+  dateEl.max = todayStr();
+  dateEl.value = (data.date && data.date <= todayStr()) ? data.date : todayStr();
   d.querySelector('.f-name').value = data.name;
   d.querySelector('.f-count').textContent = data.count;
   d.addEventListener('input', save);
@@ -198,6 +208,25 @@ function save() {
     localStorage.setItem(HKEY, JSON.stringify(history));
   } catch (e) {}
 }
+
+function clampDate(e) {
+  const el = e.target;
+  if (!el.classList || !el.classList.contains('f-date')) return;
+  const t = todayStr();
+  el.max = t;
+  if (el.value > t) { el.value = t; save(); }
+}
+function syncDates(e) {
+  const first = document.querySelector('.f-date');
+  if (!first || e.target !== first || !first.value) return;
+  document.querySelectorAll('.f-date').forEach(el => { el.value = first.value; });
+  save();
+}
+document.getElementById('list').addEventListener('input', clampDate);
+document.getElementById('list').addEventListener('change', clampDate);
+document.getElementById('list').addEventListener('focusin', clampDate);
+document.getElementById('list').addEventListener('input', syncDates);
+document.getElementById('list').addEventListener('change', syncDates);
 
 (function init() {
   let items = [];
